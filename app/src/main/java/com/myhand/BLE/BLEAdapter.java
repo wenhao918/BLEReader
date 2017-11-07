@@ -3,9 +3,12 @@ package com.myhand.BLE;
 import android.bluetooth.BluetoothClass;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 import android.database.DataSetObserver;
+import android.renderscript.Sampler;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -34,9 +37,12 @@ public class BLEAdapter extends BaseExpandableListAdapter{
     private BLEReader bleReader;
     private List<BluetoothGattService> listService;
 
-    private static class ViewHolder{
-        public TextView textViewName;
+    private static class GroupViewHolder{
+        public TextView textViewUUID;
     };
+    private static class ChildViewHolder{
+        public TextView textViewUUID;
+    }
 
     public BLEAdapter(Context context, BLEReader bleReader) {
         this.context = context;
@@ -65,7 +71,12 @@ public class BLEAdapter extends BaseExpandableListAdapter{
 
     @Override
     public int getChildrenCount(int groupPosition) {
-        return 0;
+        BluetoothGattService service=listService.get(groupPosition);
+        List<BluetoothGattCharacteristic> bluetoothGattCharacteristicList=service.getCharacteristics();
+        if(bluetoothGattCharacteristicList==null||bluetoothGattCharacteristicList.size()==0){
+            return 0;
+        }
+        return bluetoothGattCharacteristicList.size();
     }
 
     @Override
@@ -79,7 +90,12 @@ public class BLEAdapter extends BaseExpandableListAdapter{
 
     @Override
     public Object getChild(int groupPosition, int childPosition) {
-        return null;
+        BluetoothGattService service=listService.get(groupPosition);
+        List<BluetoothGattCharacteristic> bluetoothGattCharacteristicList=service.getCharacteristics();
+        if(bluetoothGattCharacteristicList==null||bluetoothGattCharacteristicList.size()==0){
+            return null;
+        }
+        return bluetoothGattCharacteristicList.get(childPosition);
     }
 
     @Override
@@ -89,7 +105,7 @@ public class BLEAdapter extends BaseExpandableListAdapter{
 
     @Override
     public long getChildId(int groupPosition, int childPosition) {
-        return 0;
+        return childPosition+groupPosition*1000;
     }
 
     @Override
@@ -113,7 +129,30 @@ public class BLEAdapter extends BaseExpandableListAdapter{
 
     @Override
     public View getChildView(int groupPosition, int childPosition, boolean isLastChild, View convertView, ViewGroup parent) {
-        return null;
+        BluetoothGattCharacteristic characteristic=(BluetoothGattCharacteristic) getChild(groupPosition,childPosition);
+
+        ChildViewHolder viewHolder;
+        if(convertView==null){
+            convertView=inflater.inflate(R.layout.layout_item_characteristic,null);
+            viewHolder=new ChildViewHolder();
+            viewHolder.textViewUUID=convertView.findViewById(R.id.textViewCharactericUUID);
+            convertView.setTag(viewHolder);
+        }else{
+            viewHolder=(ChildViewHolder) convertView.getTag();
+        }
+        if(characteristic==null) {
+            viewHolder.textViewUUID.setText("无");
+        }else{
+            List<BluetoothGattDescriptor> descriptorList=characteristic.getDescriptors();
+            String text="";
+/*
+            for(BluetoothGattDescriptor descriptor:descriptorList){
+                text=new String(descriptor.getValue());
+            }
+*/
+            viewHolder.textViewUUID.setText(text+characteristic.getUuid().toString());
+        }
+        return convertView;
     }
 
     @Override

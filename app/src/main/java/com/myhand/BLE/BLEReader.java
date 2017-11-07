@@ -9,10 +9,12 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Context;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import com.centerm.smartpos.util.HexUtil;
 import com.example.vincent.blereader.MainActivity;
 
 import java.net.Socket;
@@ -47,8 +49,35 @@ public class BLEReader {
     //发送消息
     private Handler handler;
 
+    //计次
+    private  int sendCnt;
+    private int receiveCnt;
+
+    public int getSendCnt() {
+        return sendCnt;
+    }
+
+    public void setSendCnt(int sendCnt) {
+        this.sendCnt = sendCnt;
+    }
+
+    public int getReceiveCnt() {
+        return receiveCnt;
+    }
+
+    public void setReceiveCnt(int receiveCnt) {
+        this.receiveCnt = receiveCnt;
+    }
+
+    public void resetCnt(){
+        sendCnt=0;
+        receiveCnt=0;
+    }
+
     public BLEReader() {
         receibuffer=new byte[256];
+        //启动数据接收线程
+        //new ThreadReadNotify().start();
     }
 
     public int getErrorCode() {
@@ -142,6 +171,33 @@ public class BLEReader {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(tag,"Gatt successfull");
                 gattServiceList=bluetoothGatt.getServices();
+                if(gattServiceList.size()<3){
+                    Log.d(tag,"Not the enought service find");
+                    return;
+                }
+                BluetoothGattService service=gattServiceList.get(2);
+                List<BluetoothGattCharacteristic> list=service.getCharacteristics();
+                if(list.size()!=2){
+                    Log.d(tag,"Not the right service");
+                    return;
+                }
+
+                characteristicWrite=list.get(1);
+                characteristicWrite.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+
+                characteristicNotify=list.get(0);
+                bluetoothGatt.setCharacteristicNotification(characteristicNotify,true);
+                List<BluetoothGattDescriptor> descriptorList = characteristicNotify.getDescriptors();
+                if(descriptorList==null){
+                    Log.d(tag,"No descriptor");
+                }
+                if(descriptorList != null && descriptorList.size() > 0) {
+                    for(BluetoothGattDescriptor descriptor : descriptorList) {
+                        descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                        bluetoothGatt.writeDescriptor(descriptor);
+                    }
+                }
+
                 //通知找到了服务
                 if(handler!=null){
                     Message msg=handler.obtainMessage();
@@ -169,13 +225,25 @@ public class BLEReader {
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             super.onCharacteristicWrite(gatt, characteristic, status);
-            Log.d(tag,"onPhyRead");
+
+            byte[] data=characteristic.getValue();
+            Log.d(tag,String.format("onCharacteristicWrite:%s",HexUtil.bytesToHexString(data)));
+            sendCnt++;
         }
 
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
             super.onCharacteristicChanged(gatt, characteristic);
-            Log.d(tag,"onPhyRead");
+            byte[] mByte = characteristic.getValue();
+            Log.d(tag,String.format("onCharacteristicChanged:%s",HexUtil.bytesToHexString(mByte)));
+            receiveCnt++;
+            if(handler!=null){
+                Message message=handler.obtainMessage();
+                Bundle data=new Bundle();
+                data.putByteArray("Response",mByte);
+                message.setData(data);
+                handler.sendMessage(message);
+            }
         }
 
         @Override
@@ -208,6 +276,8 @@ public class BLEReader {
             super.onMtuChanged(gatt, mtu, status);
             Log.d(tag,"onMtuChanged");
         }
+
+
     };
 
     public BluetoothGattCallback getBluetoothGattCallback() {
@@ -250,4 +320,42 @@ public class BLEReader {
             Log.d(tag,"Connect failure.");
         }
     }
+
+    //uuid: 6e400003-b5a3-f393-e0a9-e50e24dcca9e
+    private BluetoothGattCharacteristic characteristicNotify;
+    private BluetoothGattCharacteristic characteristicWrite;
+    public void writeData(byte[] data){
+        if(characteristicWrite==null){
+            return;
+        }
+        //开始写数据
+        characteristicWrite.setValue(data);
+        if(bluetoothGatt.writeCharacteristic(characteristicWrite)){
+            Log.d(tag,"Write OK");
+        }else{
+            Log.d(tag,"Write failure");
+        }
+    }
+
+/*
+    class ThreadReadNotify extends Thread{
+        @Override
+        public void run() {
+            while(true){
+                if(characteristicNotify==null) {
+                    //Log.d(tag,"No notify service found");
+                }else{
+                    while(true) {
+                        bluetoothGatt.readCharacteristic(characteristicNotify);
+                        byte[] value = characteristicNotify.getValue();
+                        if (value != null) {
+                            Log.d(tag, String.format("Received data:%s", HexUtil.bytesToHexString(value)));
+                            characteristicNotify.setValue((byte[]) null);
+                        }
+                    }
+                }
+            }
+        }
+    }
+*/
 }

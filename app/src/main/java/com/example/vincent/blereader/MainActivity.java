@@ -164,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
                     mScanning = false;
                     BLEApplication.instance.bluetoothAdapter.stopLeScan(leScanbCallback);
                 }
-            }, 2000);
+            }, 20000);
             mScanning = true;
             BLEApplication.instance.bluetoothAdapter.startLeScan(leScanbCallback);
         } else {

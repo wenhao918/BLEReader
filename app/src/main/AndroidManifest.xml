@@ -10,8 +10,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <users-feature android:name="android.hardware.bluetooth_le"
-        android:required="true"/>
+    <users-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
 
     <application
         android:name="com.myhand.BLE.BLEApplication"
@@ -34,6 +35,11 @@
         <activity
             android:name="com.myhand.BLE.BLEDeviceActivity"
             android:label="@string/title_activity_bledevice"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:windowSoftInputMode="stateHidden" />
+        <activity
+            android:name="com.zhicheng.cmd.CommandActivity"
+            android:label="@string/title_activity_command"
             android:theme="@style/AppTheme.NoActionBar"></activity>
     </application>
 

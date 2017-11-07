@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">BLEReader</string>
     <string name="action_settings">Settings</string>
-    <string name="title_activity_blegatt">BLEGattActivity</string>
-    <string name="title_activity_bledevice">BLEDeviceActivity</string>
+    <string name="title_activity_blegatt">蓝牙设备测试应用</string>
+    <string name="title_activity_bledevice">设备测试</string>
+    <string name="title_activity_command">命令编辑</string>
 </resources>
